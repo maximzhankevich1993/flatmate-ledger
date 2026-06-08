@@ -1,20 +1,26 @@
 <script>
-  import '../app.css';
-  
-  // Здесь позже развернем подписку на Supabase Auth
+  import '../app.css'; // Твои глобальные стили Tailwind
+  import { invalidate } from '$app/navigation';
+  import { onMount } from 'svelte';
+
   export let data;
+  $: ({ supabase, session } = data);
+
+  onMount(() => {
+    // Подписываемся на изменения состояния авторизации (например, если токен протухнет)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, _session) => {
+      if (_session?.expires_at !== session?.expires_at) {
+        // Перезапускает все серверные функции load() на текущем экране для обновления данных
+        invalidate('supabase:auth');
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  });
 </script>
 
-<div class="relative min-h-screen bg-cyber-bg overflow-hidden flex flex-col selection:bg-cyber-orange/30 selection:text-white">
+<div class="min-h-screen w-full bg-zinc-950 font-sans antialiased text-white selection:bg-cyber-orange/30 selection:text-white">
   
-  <div class="absolute inset-0 pointer-events-none z-0 overflow-hidden">
-    <div class="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-cyber-orange to-cyber-amber rounded-full blur-[120px] opacity-25 animate-ambient-glow"></div>
-    
-    <div class="absolute -bottom-40 -left-40 w-[30rem] h-[30rem] bg-gradient-to-tr from-red-900 to-cyber-orange rounded-full blur-[150px] opacity-20 animate-ambient-glow" style="animation-delay: -4s;"></div>
-  </div>
-
-  <main class="relative z-10 flex-1 flex flex-col w-full max-w-[1440px] mx-auto">
-    <slot />
-  </main>
+  <slot />
 
 </div>
