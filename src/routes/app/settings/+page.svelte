@@ -1,116 +1,104 @@
 <script>
   import BottomNav from '$lib/components/ui/BottomNav.svelte';
+  import { supabase } from '$lib/supabaseClient';
 
-  // Принимаем живые данные с сервера
   export let data;
-  $: ({ household, roommates } = data);
+  $: ({ profile, household } = data);
 
   let copied = false;
 
-  // Функция для красивого копирования инвайт-кода на мобилке
+  // Функция копирования инвайт-кода в буфер обмена
   function copyInviteCode() {
-    if (!household.invite_code) return;
+    if (!household?.invite_code) return;
     navigator.clipboard.writeText(household.invite_code);
     copied = true;
-    setTimeout(() => copied = false, 2000);
+    setTimeout(() => { copied = false; }, 2000);
+  }
+
+  // Функция выхода из аккаунта
+  async function handleSignOut() {
+    const { error } = await supabase.auth.signOut();
+    if (!error) {
+      // Наш hooks.server.js мгновенно перехватит очистку сессии и редиректнет на /auth
+      window.location.href = '/auth';
+    } else {
+      alert('Error signing out: ' + error.message);
+    }
   }
 </script>
 
-<div class="w-full min-h-screen text-white p-5 pb-32 md:p-10 md:pb-24">
+<div class="w-full min-h-screen text-white p-5 pb-32 md:p-10 md:pb-24 flex flex-col justify-between">
   
-  <!-- ХЕДЕР СТРАНИЦЫ -->
-  <header class="max-w-3xl mx-auto mb-8">
-    <span class="text-[10px] font-bold tracking-widest text-zinc-500 uppercase">System Control</span>
-    <h1 class="text-3xl font-black tracking-tight text-white mt-0.5">Settings ⚙️</h1>
-  </header>
+  <div class="max-w-2xl mx-auto w-full">
+    <header class="mb-8">
+      <span class="text-[10px] font-bold tracking-widest text-zinc-500 uppercase">System Preferences</span>
+      <h1 class="text-3xl font-black tracking-tight text-white mt-0.5">Settings ⚙️</h1>
+    </header>
 
-  <div class="max-w-3xl mx-auto space-y-6">
-    
-    <!-- КАРТОЧКА НАСТРОЕК ДОМА -->
-    <div class="p-6 bg-cyber-card/40 border border-white/[0.06] backdrop-blur-xl rounded-3xl">
-      <h2 class="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-4">Household Profile</h2>
+    <div class="space-y-6">
       
-      <div class="space-y-4">
-        <!-- Поле имени дома -->
+      <section class="p-6 bg-cyber-card/40 border border-white/[0.06] backdrop-blur-xl rounded-3xl flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-cyber-orange to-cyber-amber flex items-center justify-center text-black font-black text-sm shadow-neon-orange/10">
+            {profile?.username ? profile.username.substring(0, 2).toUpperCase() : 'U'}
+          </div>
+          <div>
+            <h2 class="text-base font-black text-white">{profile?.username || 'Active User'}</h2>
+            <p class="text-xs text-zinc-500 font-medium mt-0.5">Authorized Agent</p>
+          </div>
+        </div>
+        
+        <div class="text-right">
+          <span class="block text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Total Score</span>
+          <span class="text-lg font-black font-mono text-cyber-amber">{profile?.points || 0} XP</span>
+        </div>
+      </section>
+
+      <section class="p-6 bg-cyber-card/40 border border-white/[0.06] backdrop-blur-xl rounded-3xl space-y-4">
         <div>
-          <label class="block text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5" for="house-name">House Name</label>
-          <input 
-            id="house-name"
-            type="text" 
-            bind:value={household.name}
-            class="w-full bg-zinc-950/60 border border-white/5 rounded-xl px-4 py-3 text-sm font-medium text-white focus:outline-none focus:border-cyber-orange/40 transition-colors"
-          />
+          <h3 class="text-xs font-bold text-zinc-400 uppercase tracking-wider">Household Perimeter</h3>
+          <p class="text-2xl font-black text-white mt-1">{household?.name || 'Grid Sector'}</p>
         </div>
 
-        <!-- Поле инвайт-кода с кнопкой копирования -->
+        <hr class="border-white/[0.04] my-2" />
+
         <div>
-          <span class="block text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5">Roommate Invite Code</span>
+          <label class="block text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-2">Enlist Roommates (Invite Code)</label>
           <div class="flex gap-2">
-            <div class="flex-1 bg-zinc-950/80 border border-white/[0.02] rounded-xl px-4 py-3 text-sm font-mono font-bold text-cyber-amber flex items-center">
-              {household.invite_code}
+            <div class="flex-1 bg-zinc-950/80 border border-white/5 rounded-xl px-4 py-3 font-mono text-sm font-bold text-cyber-orange flex items-center justify-between select-all">
+              {household?.invite_code || 'NO-CODE-FOUND'}
             </div>
+            
             <button 
               on:click={copyInviteCode}
-              class="px-4 bg-white text-black font-black text-xs rounded-xl hover:bg-zinc-200 transition-colors cursor-pointer border-none"
+              type="button"
+              class="px-5 bg-white text-black font-black text-xs uppercase tracking-wider rounded-xl hover:bg-zinc-200 transition-colors cursor-pointer border-none"
             >
               {copied ? 'Copied! ✓' : 'Copy'}
             </button>
           </div>
+          <p class="text-[10px] text-zinc-500 mt-2 font-medium">Share this operational key with your roommates so they can sync with your budget and task matrices.</p>
         </div>
-      </div>
-    </div>
+      </section>
 
-    <!-- УПРАВЛЕНИЕ СОЖИТЕЛЯМИ -->
-    <div class="p-6 bg-cyber-card/40 border border-white/[0.06] backdrop-blur-xl rounded-3xl">
-      <h2 class="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-4">Roommates Management ({roommates.length})</h2>
-      
-      <div class="space-y-2">
-        {#each roommates as mate}
-          <div class="flex justify-between items-center p-3.5 bg-zinc-950/40 border border-white/[0.02] rounded-xl">
-            <div>
-              <span class="text-sm font-bold text-zinc-200">{mate.username}</span>
-              <span class="block text-[9px] text-zinc-600 font-medium mt-0.5">
-                Joined {new Date(mate.created_at).toLocaleDateString([], { month: 'short', year: 'numeric' })}
-              </span>
-            </div>
-            
-            <!-- Кнопка исключения (скрытая фича администратора) -->
-            <button class="text-[10px] font-bold text-zinc-600 hover:text-rose-500 transition-colors bg-transparent border-none cursor-pointer">
-              Kick
-            </button>
-          </div>
-        {/each}
-      </div>
-    </div>
-
-    <!-- PREMIUM WEB3 BLOCK -->
-    <div class="p-6 bg-gradient-to-br from-cyber-card/80 to-zinc-950/20 border border-cyber-amber/20 rounded-3xl relative overflow-hidden group shadow-neon-amber/5">
-      <div class="absolute -top-12 -right-12 w-32 h-32 bg-cyber-amber/5 rounded-full blur-2xl group-hover:bg-cyber-amber/10 transition-all"></div>
-      
-      <div class="flex items-start justify-between gap-4">
+      <section class="p-6 bg-cyber-card/20 border border-white/[0.04] rounded-3xl flex items-center justify-between">
         <div>
-          <span class="text-[9px] font-black text-cyber-amber bg-cyber-amber/10 border border-cyber-amber/20 px-2 py-0.5 rounded-md uppercase tracking-widest">
-            PRO FEATURE
-          </span>
-          <h3 class="text-base font-black text-white mt-2.5">Web3 Smart Invoice Split</h3>
-          <p class="text-xs text-zinc-400 mt-1 max-w-md">
-            Pay rent, utility checks, and grocery bills directly with crypto. Automatic smart contract deployment for your household ledger.
-          </p>
+          <h3 class="text-sm font-bold text-zinc-400">Terminate Session</h3>
+          <p class="text-[11px] text-zinc-500 mt-0.5">Disconnect this node from the local household network.</p>
         </div>
-        <div class="text-right">
-          <span class="block text-lg font-black font-mono text-white">$4.99</span>
-          <span class="text-[9px] text-zinc-500 font-bold uppercase">per month</span>
-        </div>
-      </div>
-      
-      <button class="w-full mt-5 py-3 bg-gradient-to-r from-cyber-amber to-cyber-orange text-black font-black text-xs rounded-xl hover:opacity-90 transition-opacity cursor-pointer border-none shadow-neon-orange/20">
-        Unlock Premium Nodes
-      </button>
-    </div>
+        
+        <button 
+          on:click={handleSignOut}
+          type="button"
+          class="px-5 py-3 bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 text-rose-400 font-bold text-xs uppercase tracking-wider rounded-xl transition-colors cursor-pointer"
+        >
+          Sign Out
+        </button>
+      </section>
 
+    </div>
   </div>
 
-  <!-- ТАББАР -->
   <BottomNav />
 
 </div>
