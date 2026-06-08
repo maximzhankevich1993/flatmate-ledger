@@ -1,35 +1,57 @@
 <script>
   import BottomNav from '$lib/components/ui/BottomNav.svelte';
   import AddChoreModal from '$lib/components/chores/AddChoreModal.svelte';
+  import { supabase } from '$lib/supabaseClient';
 
-  // Временный реактивный стейт списка обязанностей
-  let chores = [
-    { id: 1, title: 'Clean the Kitchen 🍳', points: 15, assignee: 'You', due: 'Before 10 PM', done: false },
-    { id: 2, title: 'Take out the Trash 🦝', points: 5, assignee: 'Bob', due: 'Today', done: false },
-    { id: 3, title: 'Vacuum Living Room 🧹', points: 10, assignee: 'Alice', due: 'In 2 days', done: true },
-    { id: 4, title: 'Deep Clean Bathroom 🧼', points: 25, assignee: 'You', due: 'Sunday', done: false }
-  ];
+  // Принимаем реальные данные с сервера (+page.server.js)
+  export let data;
 
-  let userPoints = 32;
-  let isModalOpen = false; // Переключатель видимости модалки
+  // Трансформируем серверные данные из Supabase под формат нашего интерфейса
+  $: chores = data.chores.map(c => ({
+    id: c.id,
+    title: c.title,
+    points: c.points,
+    due: c.due_date,
+    done: c.is_done,
+    assignee: c.profiles?.username || 'Everyone'
+  }));
+  
+  $: userPoints = data.userPoints;
+  
+  let isModalOpen = false;
 
-  // Логика переключения статуса задачи
-  function toggleChore(id) {
-    chores = chores.map(chore => {
-      if (chore.id === id) {
-        const updatedStatus = !chore.done;
-        if (chore.assignee === 'You') {
-          userPoints = updatedStatus ? userPoints + chore.points : userPoints - chore.points;
-        }
-        return { ...chore, done: updatedStatus };
-      }
-      return chore;
-    });
+  // Логика переключения статуса задачи с мгновенным апдейтом в Supabase
+  async function toggleChore(id) {
+    const target = chores.find(c => c.id === id);
+    if (!target) return;
+
+    const newStatus = !target.done;
+
+    // Оптимистичный апдейт интерфейса (чтобы кнопка переключалась без задержек)
+    target.done = newStatus;
+    chores = [...chores];
+
+    // Отправляем изменения в базу данных
+    await supabase
+      .from('chores')
+      .update({ is_done: newStatus })
+      .eq('id', id);
   }
 
-  // Функция добавления новой задачи из модалки
-  function handleAddChore(newChore) {
-    chores = [newChore, ...chores];
+  // Функция добавления новой задачи в Supabase
+  async function handleAddChore(newChore) {
+    const targetHouseholdId = "99999999-9999-9999-9999-999999999999";
+
+    // Сохраняем задачу в реальную таблицу бэкенда
+    await supabase
+      .from('chores')
+      .insert([{
+        household_id: targetHouseholdId,
+        title: newChore.title,
+        points: newChore.points,
+        due_date: newChore.due,
+        is_done: false
+      }]);
   }
 </script>
 
