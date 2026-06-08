@@ -1,22 +1,28 @@
 /** @type {import('./$types').PageServerLoad} */
 export async function load({ parent, locals }) {
-  // Забираем профиль из родительского лейаута
+  // 1. Получаем профиль текущего пользователя из родительского layout
   const { profile } = await parent();
 
+  // Защита, если профиль не загрузился
   if (!profile || !profile.household_id) {
-    return { household: null };
+    return {
+      inviteCode: 'NOT_ASSIGNED'
+    };
   }
 
-  // Вытягиваем данные о доме сожителя
+  // 2. Запрашиваем из базы код приглашения (invite_code) именно для этого дома
   const { data: household, error } = await locals.supabase
     .from('households')
-    .select('name, invite_code')
+    .select('invite_code')
     .eq('id', profile.household_id)
     .single();
 
-  if (error) console.error('Error fetching household settings:', error);
+  if (error) {
+    console.error('Error loading household invite code:', error.message);
+  }
 
+  // Передаем инвайт-код на фронтенд страницы настроек
   return {
-    household: household || null
+    inviteCode: household ? household.invite_code : 'NOT_ASSIGNED'
   };
 }
