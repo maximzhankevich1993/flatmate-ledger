@@ -1,31 +1,38 @@
 /** @type {import('./$types').PageServerLoad} */
 export async function load({ parent, locals }) {
-  // Занимаем профиль из родительского +layout.server.js
+  // 1. Извлекаем глобальный профиль пользователя из родительского layout
   const { profile } = await parent();
 
-  // Если юзер каким-то чудом проскочил без дома, отдаем пустой массив
+  // Защита на случай, если профиль не прогрузился
   if (!profile || !profile.household_id) {
-    return { expenses: [] };
+    return {
+      expenses: [],
+    };
   }
 
-  // Тянем расходы только нашего дома + через JOIN забираем имя того, кто оплатил чек
+  // 2. Делаем запрос к Supabase: вытягиваем тратты этого дома
+  // Используем связку 'profiles(username)', чтобы вместо ID сожителя сразу получить его понятное имя
   const { data: expenses, error } = await locals.supabase
     .from('expenses')
     .select(`
       id,
       description,
       amount,
-      tag,
+      category,
       created_at,
-      paid_by,
-      profiles ( username )
+      profiles (
+        username
+      )
     `)
     .eq('household_id', profile.household_id)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false }); // Свежие траты всегда сверху
 
-  if (error) console.error('Error fetching filtered expenses:', error);
+  if (error) {
+    console.error('Error loading expenses stream:', error.message);
+  }
 
+  // Возвращаем массив расходов в интерфейс +page.svelte
   return {
-    expenses: expenses || []
+    expenses: expenses || [],
   };
 }
