@@ -1,86 +1,95 @@
 <script>
-  import GlassCard from '$lib/components/ui/GlassCard.svelte';
   import BottomNav from '$lib/components/ui/BottomNav.svelte';
+  import GlassCard from '$lib/components/ui/GlassCard.svelte';
 
-  // Имитация данных из Supabase (для MVP)
-  let username = "Mike";
-  let householdName = "Our Cozy Pigsty 🏠";
-  
-  let weeklyProgress = 75; // % выполненных задач дома
-  
-  let leaderboard = [
-    { name: "Alice", points: 45, rank: 1, isLeader: true, avatar: "👑" },
-    { name: "Mike", points: 32, rank: 2, isLeader: false, avatar: "🔥" },
-    { name: "Bob", points: 12, rank: 3, isLeader: false, avatar: "💤" }
-  ];
+  // Принимаем живые данные от сервера
+  export let data;
+
+  $: ({ leaderboard, totalSpent, activeChoresCount } = data);
 </script>
 
-<div class="w-full min-h-screen text-white p-5 pb-32 md:p-10 md:pb-24 flex flex-col justify-between">
+<div class="w-full min-h-screen text-white p-5 pb-32 md:p-10 md:pb-24">
   
-  <div>
-    <header class="flex justify-between items-center mb-8 max-w-4xl mx-auto">
-      <div>
-        <span class="text-[10px] font-bold tracking-widest text-zinc-500 uppercase">Welcome back</span>
-        <h1 class="text-2xl font-black tracking-tight text-white mt-0.5">Hi, {username}! 👋</h1>
-        <p class="text-xs text-cyber-amber font-medium mt-0.5">{householdName}</p>
-      </div>
-      <div class="w-11 h-11 rounded-full border border-white/10 bg-cyber-card flex items-center justify-center text-sm font-black shadow-neon-orange text-cyber-orange">
-        M
-      </div>
-    </header>
+  <!-- ХЕДЕР С ПРИВЕТСТВИЕМ -->
+  <header class="max-w-5xl mx-auto mb-10">
+    <span class="text-[10px] font-bold tracking-widest text-zinc-500 uppercase">Cyber Household Ledger</span>
+    <h1 class="text-4xl font-black tracking-tight text-white mt-1">Neon Citadel 🌌</h1>
+    <p class="text-xs text-zinc-400 mt-1">Welcome back, vibe coder. Here is your house state.</p>
+  </header>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto items-start">
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 max-w-5xl mx-auto items-start">
+    
+    <!-- ЛЕВАЯ СЕКЦИЯ: Bento-сетка статистики (7 колонок) -->
+    <div class="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
       
-      <div class="w-full flex justify-center">
-        <GlassCard 
-          title="Current Balance" 
-          amount="+$23.50" 
-          subtitle="Charlie owes you $12.00 • You owe Alice $6.00. Everything is optimized."
-        />
+      <!-- Главная 3D GlassCard баланса (на всю ширину левой секции) -->
+      <div class="sm:col-span-2">
+        <GlassCard />
       </div>
 
-      <div class="w-full space-y-6">
-        
-        <div class="p-6 rounded-3xl bg-cyber-card/40 border border-white/[0.06] backdrop-blur-xl">
-          <div class="flex justify-between items-center mb-3">
-            <span class="text-xs font-bold text-zinc-400 uppercase tracking-wider">Weekly Chores Done</span>
-            <span class="text-sm font-black text-cyber-green drop-shadow-[0_0_10px_rgba(0,255,135,0.3)]">{weeklyProgress}%</span>
-          </div>
-          <div class="w-full h-2 bg-zinc-950/80 rounded-full overflow-hidden border border-white/[0.02]">
-            <div 
-              class="h-full bg-gradient-to-r from-cyber-orange to-cyber-amber rounded-full shadow-neon-orange transition-all duration-500" 
-              style="width: {weeklyProgress}%"
-            ></div>
-          </div>
-          <p class="text-[11px] text-zinc-500 mt-3 font-medium">3 more tasks remaining today to keep the house clean.</p>
-        </div>
+      <!-- Bento Блок 1: Сумма общих трат дома -->
+      <div class="p-6 bg-cyber-card/40 border border-white/[0.06] backdrop-blur-xl rounded-3xl relative overflow-hidden group">
+        <div class="absolute -bottom-6 -right-6 w-20 h-20 bg-cyber-green/10 rounded-full blur-xl group-hover:bg-cyber-green/20 transition-all"></div>
+        <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block mb-1">Total Pool Spent</span>
+        <h3 class="text-2xl font-black text-white font-mono">${totalSpent.toFixed(2)}</h3>
+        <p class="text-[11px] text-cyber-green mt-2 font-medium">Synced from Ledger →</p>
+      </div>
 
-        <div class="p-6 rounded-3xl bg-cyber-card/40 border border-white/[0.06] backdrop-blur-xl">
-          <span class="text-xs font-bold text-zinc-400 uppercase tracking-wider block mb-4">House Leaderboard</span>
-          
-          <div class="space-y-3">
-            {#each leaderboard as user}
-              <div class="flex justify-between items-center p-3 bg-zinc-950/30 rounded-2xl border border-white/[0.02] transition-all hover:border-white/[0.08]">
-                <div class="flex items-center gap-3">
-                  <span class="text-lg w-6 text-center font-bold text-zinc-500">{user.rank}</span>
-                  <div class="w-8 h-8 rounded-xl bg-cyber-card border flex items-center justify-center text-sm
-                    {user.isLeader ? 'border-cyber-orange shadow-neon-orange' : 'border-white/5'}">
-                    {user.avatar}
-                  </div>
-                  <span class="text-sm font-bold {user.name === username ? 'text-cyber-orange' : 'text-zinc-300'}">
-                    {user.name}
-                  </span>
-                </div>
-                <span class="text-xs font-black text-zinc-400">{user.points} pts</span>
+      <!-- Bento Блок 2: Горящие задачи -->
+      <div class="p-6 bg-cyber-card/40 border border-white/[0.06] backdrop-blur-xl rounded-3xl relative overflow-hidden group">
+        <div class="absolute -bottom-6 -right-6 w-20 h-20 bg-cyber-orange/10 rounded-full blur-xl group-hover:bg-cyber-orange/20 transition-all"></div>
+        <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block mb-1">Active Duties</span>
+        <h3 class="text-2xl font-black text-white font-mono">{activeChoresCount} Chores</h3>
+        <p class="text-[11px] text-cyber-orange mt-2 font-medium">Awaiting completion →</p>
+      </div>
+
+    </div>
+
+    <!-- ПРАВАЯ СЕКЦИЯ: Игровой Лидерборд сожителей (5 колонок) -->
+    <div class="lg:col-span-5 w-full p-6 bg-cyber-card/40 border border-white/[0.06] backdrop-blur-xl rounded-3xl">
+      <div class="mb-5">
+        <h2 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+          🏆 House Leaderboard
+        </h2>
+        <p class="text-[11px] text-zinc-500 mt-0.5">Earn XP by completing tasks around the flat</p>
+      </div>
+
+      <!-- СПИСОК УЧАСТНИКОВ -->
+      <div class="space-y-3">
+        {#if leaderboard.length === 0}
+          <p class="text-xs text-zinc-600 text-center py-6 font-medium">No roommates found.</p>
+        {:else}
+          {#each leaderboard as member, index}
+            <div class="flex justify-between items-center p-3.5 bg-zinc-950/40 border border-white/[0.02] rounded-2xl relative group">
+              
+              <div class="flex items-center gap-3">
+                <!-- Место в топе -->
+                <span class="w-5 font-mono text-xs font-black text-center
+                  {index === 0 ? 'text-cyber-amber text-sm' : index === 1 ? 'text-zinc-400' : 'text-zinc-600'}"
+                >
+                  #{index + 1}
+                </span>
+
+                <!-- Имя пользователя -->
+                <span class="text-sm font-bold text-zinc-200 group-hover:text-white transition-colors">
+                  {member.username}
+                </span>
               </div>
-            {/each}
-          </div>
-        </div>
 
+              <!-- Его XP очки -->
+              <span class="text-xs font-black px-2.5 py-1 bg-zinc-900/60 rounded-xl border border-white/5 text-cyber-amber font-mono">
+                {member.points} XP
+              </span>
+
+            </div>
+          {/each}
+        {/if}
       </div>
+
     </div>
   </div>
 
+  <!-- ОГНЕННЫЙ ТАББАР -->
   <BottomNav />
 
 </div>
