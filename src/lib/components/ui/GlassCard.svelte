@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
 
-  // Пропсы для гибкости (можно менять заголовок, сумму и т.д.)
+  // Пропсы для динамической подстановки данных из базы
   export let title = "Current Balance";
   export let amount = "$23.50";
   export let subtitle = "Alice paid for Netflix. Your share is due.";
@@ -9,7 +9,7 @@
   let cardElement;
   let glowElement;
 
-  // Математика 3D-наклона (Tilt) из твоего референса
+  // Математика 3D-наклона (Tilt EFFECT)
   function handleMouseMove(e) {
     if (!cardElement || !glowElement) return;
 
@@ -17,22 +17,22 @@
     const x = e.clientX - rect.left; // координата X внутри карточки
     const y = e.clientY - rect.top;  // координата Y внутри карточки
 
-    // Вычисляем углы наклона (макс 15 градусов)
+    // Вычисляем углы наклона (максимум 10-15 градусов)
     const xc = rect.width / 2;
     const yc = rect.height / 2;
     const angleX = (yc - y) / 10;
     const angleY = (x - xc) / 10;
 
-    // Применяем 3D трансформацию к карточке
+    // Применяем 3D-трансформацию к контейнеру карточки
     cardElement.style.transform = `perspective(1000px) rotateX(${angleX}deg) rotateY(${angleY}deg) scale3d(1.02, 1.02, 1.02)`;
     
-    // Перемещаем глянцевый блик за курсором
+    // Двигаем неоновый блик за курсором
     glowElement.style.left = `${x}px`;
     glowElement.style.top = `${y}px`;
     glowElement.style.opacity = '1';
   }
 
-  // Сброс карточки в исходное состояние, когда мышь уходит
+  // Возвращаем в исходную позицию при уходе мыши
   function handleMouseLeave() {
     if (!cardElement || !glowElement) return;
     cardElement.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)';
@@ -44,7 +44,7 @@
   bind:this={cardElement}
   on:mousemove={handleMouseMove}
   on:mouseleave={handleMouseLeave}
-  class="relative w-full max-w-sm p-6 bg-cyber-card/40 border border-white/[0.08] backdrop-blur-xl rounded-3xl transition-transform duration-100 ease-out shadow-[0_20px_50px_rgba(0,0,0,0.4)] overflow-hidden cursor-pointer group select-none select-none"
+  class="relative w-full max-w-sm p-6 bg-cyber-card/40 border border-white/[0.08] backdrop-blur-xl rounded-3xl transition-transform duration-100 ease-out shadow-[0_20px_50px_rgba(0,0,0,0.4)] overflow-hidden cursor-pointer group select-none"
   style="transform-style: preserve-3d;"
 >
   <div 
@@ -70,44 +70,15 @@
       {subtitle}
     </p>
 
-    <button class="w-full mt-6 py-3.5 bg-gradient-to-b from-cyber-orange to-red-600 hover:from-orange-500 hover:to-red-500 text-white font-bold text-sm rounded-2xl shadow-neon-orange active:scale-95 transition-all duration-200 cursor-pointer">
+    <button class="w-full mt-6 py-3.5 bg-gradient-to-b from-cyber-orange to-red-600 hover:from-orange-500 hover:to-red-500 text-white font-bold text-sm rounded-2xl shadow-neon-orange active:scale-95 transition-all duration-200 cursor-pointer border-none">
       Settle Up via Revolut
     </button>
   </div>
 </div>
 
 <style>
-  /* Включаем аппаратное ускорение для плавности 3D */
+  /* Аппаратное ускорение для идеально плавного FPS на смартфонах */
   div {
     will-change: transform;
   }
 </style>
-
-<div class="w-full p-8 bg-gradient-to-br from-white/[0.05] to-transparent border border-white/[0.08] backdrop-blur-xl rounded-[32px] relative overflow-hidden group shadow-2xl">
-  
-  <!-- Внутренние неоновые размытия для глубины стекла -->
-  <div class="absolute -top-12 -left-12 w-40 h-40 bg-cyber-orange/10 rounded-full blur-2xl group-hover:bg-cyber-orange/15 transition-all duration-500"></div>
-  <div class="absolute -bottom-12 -right-12 w-40 h-40 bg-cyber-amber/10 rounded-full blur-2xl group-hover:bg-cyber-amber/15 transition-all duration-500"></div>
-
-  <!-- Контент -->
-  <div class="relative z-10 flex flex-col sm:flex-row justify-between sm:items-center gap-6">
-    <div>
-      <span class="text-[9px] font-black px-2 py-0.5 bg-white/5 border border-white/10 rounded-md text-zinc-400 uppercase tracking-widest">
-        System Status: Operational
-      </span>
-      <h2 class="text-2xl font-black tracking-tight text-white mt-3">
-        All nodes are synchronized
-      </h2>
-      <p class="text-xs text-zinc-400 mt-1 max-w-sm">
-        Your shared household economy and gamified task grid are running smoothly. No critical conflicts detected.
-      </p>
-    </div>
-
-    <!-- Быстрый интерактивный статус-badge -->
-    <div class="flex items-center gap-3 bg-zinc-950/40 border border-white/[0.04] p-3 rounded-2xl self-start sm:self-auto">
-      <div class="w-2.5 h-2.5 rounded-full bg-cyber-green animate-pulse shadow-neon-green"></div>
-      <span class="text-xs font-mono font-bold text-zinc-300 uppercase tracking-wider">Grid Online</span>
-    </div>
-  </div>
-
-</div>
