@@ -1,0 +1,50 @@
+<script>
+  // Простая утилита для проверки активного роута, чтобы подсвечивать нужную кнопку
+  import { page } from '$app/stores';
+  
+  $: currentPath = $page.url.pathname;
+</script>
+
+<nav class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-2.5rem)] max-w-lg h-16 bg-cyber-card/60 border border-white/[0.08] backdrop-blur-2xl rounded-2xl flex items-center justify-around px-4 shadow-2xl z-50">
+  
+  <!-- Кнопка: Главная (Дашборд) -->
+  <a 
+    href="/" 
+    class="flex flex-col items-center justify-center gap-1 text-decoration-none transition-all duration-200 group
+      {currentPath === '/' ? 'text-cyber-orange scale-105' : 'text-zinc-500 hover:text-zinc-300'}"
+  >
+    <span class="text-lg">🌌</span>
+    <span class="text-[9px] font-black uppercase tracking-wider">Citadel</span>
+  </a>
+
+  <!-- Кнопка: Финансы -->
+  <a 
+    href="/app/expenses" 
+    class="flex flex-col items-center justify-center gap-1 text-decoration-none transition-all duration-200 group
+      {currentPath === '/app/expenses' ? 'text-cyber-green scale-105' : 'text-zinc-500 hover:text-zinc-300'}"
+  >
+    <span class="text-lg">💳</span>
+    <span class="text-[9px] font-black uppercase tracking-wider">Ledger</span>
+  </a>
+
+  <!-- Кнопка: Задачи -->
+  <a 
+    href="/app/chores" 
+    class="flex flex-col items-center justify-center gap-1 text-decoration-none transition-all duration-200 group
+      {currentPath === '/app/chores' ? 'text-cyber-amber scale-105' : 'text-zinc-500 hover:text-zinc-300'}"
+  >
+    <span class="text-lg">🧹</span>
+    <span class="text-[9px] font-black uppercase tracking-wider">Chores</span>
+  </a>
+
+  <!-- Кнопка: Настройки -->
+  <a 
+    href="/app/settings" 
+    class="flex flex-col items-center justify-center gap-1 text-decoration-none transition-all duration-200 group
+      {currentPath === '/app/settings' ? 'text-white scale-105' : 'text-zinc-500 hover:text-zinc-300'}"
+  >
+    <span class="text-lg">⚙️</span>
+    <span class="text-[9px] font-black uppercase tracking-wider">System</span>
+  </a>
+
+</nav>
