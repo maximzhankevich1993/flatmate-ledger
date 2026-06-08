@@ -4,11 +4,13 @@
 
 @layer base {
   html, body {
-    background-color: #0A0A0E; /* Наш фирменный cyber-bg */
+    background-color: #0A0A0E; /* Наш фирменный глубокий cyber-bg */
     color: #FFFFFF;
     font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     overflow-x: hidden;
-    -webkit-tap-highlight-color: transparent;
+    -webkit-tap-highlight-color: transparent; /* Убирает уродливую серую рамку при клике на смартфонах */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   /* Плавный скролл для списков */
@@ -43,7 +45,25 @@
     opacity: 0.35;
   }
   100% {
-    transform: translate(-10px, 20px) scale(0.9) ;
+    transform: translate(-10px, 20px) scale(0.9);
     opacity: 0.2;
   }
+}
+
+/* Кастомный футуристичный скроллбар для длинных списков (активных тасок/расходов) */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(10, 10, 14, 0.5);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(63, 63, 70, 0.4); /* На базе zinc-700 */
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 94, 0, 0.4); /* Подсвечиваем нашим cyber-orange при ховере */
 }
