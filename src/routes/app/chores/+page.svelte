@@ -1,5 +1,6 @@
 <script>
   import BottomNav from '$lib/components/ui/BottomNav.svelte';
+  import AddChoreModal from '$lib/components/chores/AddChoreModal.svelte';
 
   // Временный реактивный стейт списка обязанностей
   let chores = [
@@ -10,13 +11,13 @@
   ];
 
   let userPoints = 32;
+  let isModalOpen = false; // Переключатель видимости модалки
 
-  // Логика переключения статуса задачи с анимацией начисления поинтов
+  // Логика переключения статуса задачи
   function toggleChore(id) {
     chores = chores.map(chore => {
       if (chore.id === id) {
         const updatedStatus = !chore.done;
-        // Если задача выполнена нами, добавляем очки, если отменена — вычитаем
         if (chore.assignee === 'You') {
           userPoints = updatedStatus ? userPoints + chore.points : userPoints - chore.points;
         }
@@ -24,6 +25,11 @@
       }
       return chore;
     });
+  }
+
+  // Функция добавления новой задачи из модалки
+  function handleAddChore(newChore) {
+    chores = [newChore, ...chores];
   }
 </script>
 
@@ -44,7 +50,13 @@
     
     <div class="flex justify-between items-center px-2">
       <h2 class="text-xs font-bold text-zinc-400 uppercase tracking-wider">Active Duties</h2>
-      <span class="text-[10px] text-zinc-600 font-medium">Tap circle to complete</span>
+      
+      <button 
+        on:click={() => isModalOpen = true}
+        class="text-xs font-black text-cyber-orange hover:text-cyber-amber transition-colors flex items-center gap-1 cursor-pointer bg-transparent border-none"
+      >
+        <span>+</span> Add Chore
+      </button>
     </div>
 
     <div class="space-y-3">
@@ -61,7 +73,7 @@
             <div class="w-6 h-6 rounded-full border flex items-center justify-center transition-all duration-300
               {chore.done 
                 ? 'bg-cyber-green border-transparent shadow-neon-green text-black scale-95' 
-                : 'border-white/20 bg-zinc-900/50 group-hover:border-cyber-orange'}"
+                : 'border-white/20 bg-zinc-900/50'}"
             >
               {#if chore.done}
                 <svg class="w-3 h-3 stroke-[4.5] stroke-current" fill="none" viewBox="0 0 24 24">
@@ -100,6 +112,12 @@
     </div>
 
   </div>
+
+  <AddChoreModal 
+    isOpen={isModalOpen} 
+    onClose={() => isModalOpen = false} 
+    onAdd={handleAddChore} 
+  />
 
   <BottomNav />
 
