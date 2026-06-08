@@ -1,36 +1,45 @@
-import { supabase } from '$lib/supabaseClient';
-
 /** @type {import('./$types').PageServerLoad} */
-export async function load() {
-  // Наш MVP-идентификатор дома
-  const targetHouseholdId = "99999999-9999-9999-9999-999999999999";
+export async function load({ parent, locals }) {
+  // Вытаскиваем живой профиль сожителя, который спас нам hooks.server.js
+  const { profile } = await parent();
 
-  // 1. Загружаем сожителей для Лидерборда (сортировка по XP очкам)
-  const { data: leaderboard, error: leaderError } = await supabase
+  // Если профиля или дома нет — отдаем по нулям безопасно
+  if (!profile || !profile.household_id) {
+    return {
+      leaderboard: [],
+      totalSpent: 0,
+      activeChoresCount: 0
+    };
+  }
+
+  const currentHouseholdId = profile.household_id;
+
+  // 1. Загружаем сожителей для Лидерборда (динамическая сортировка по XP очкам)
+  const { data: leaderboard, error: leaderError } = await locals.supabase
     .from('profiles')
     .select('username, points')
-    .eq('household_id', targetHouseholdId)
+    .eq('household_id', currentHouseholdId)
     .order('points', { ascending: false });
 
-  if (leaderError) console.error('Leaderboard error:', leaderError);
+  if (leaderError) console.error('Leaderboard fetch error:', leaderError);
 
-  // 2. Считаем общую сумму трат дома для Bento-карточки
-  const { data: expenses, error: expError } = await supabase
+  // 2. Считаем общую сумму трат именно нашего дома для Bento-карточки
+  const { data: expenses, error: expError } = await locals.supabase
     .from('expenses')
     .select('amount')
-    .eq('household_id', targetHouseholdId);
+    .eq('household_id', currentHouseholdId);
 
-  if (expError) console.error('Expenses stats error:', expError);
+  if (expError) console.error('Expenses statistics error:', expError);
   const totalSpent = expenses ? expenses.reduce((sum, e) => sum + Number(e.amount), 0) : 0;
 
-  // 3. Считаем количество горящих задач
-  const { data: chores, error: choresError } = await supabase
+  // 3. Считаем количество только активных (невыполненных) задач в доме
+  const { data: chores, error: choresError } = await locals.supabase
     .from('chores')
     .select('id')
-    .eq('household_id', targetHouseholdId)
+    .eq('household_id', currentHouseholdId)
     .eq('is_done', false);
 
-  if (choresError) console.error('Chores stats error:', choresError);
+  if (choresError) console.error('Chores statistics error:', choresError);
   const activeChoresCount = chores ? chores.length : 0;
 
   return {
