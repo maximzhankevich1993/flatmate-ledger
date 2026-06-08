@@ -6,20 +6,30 @@
   export let data;
   $: ({ chores, roommates, profile, isPremium } = data);
 
-  // Стейт формы создания задачи
   let title = '';
   let points = 10;
   let dueDate = '';
   let assigneeId = '';
-  let isRecurring = false; // Стейт для нашей новой Премиум-фичи
+  let isRecurring = false;
   let isSubmitting = false;
 
-  // Функция создания нового квеста
+  // Константа штрафа за просрочку
+  const OVERDUE_PENALTY = 20;
+
+  // Функция для проверки, просрочен ли квест
+  function isChoreOverdue(due_date, is_done) {
+    if (!due_date || is_done) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const deadline = new Date(due_date);
+    deadline.setHours(0, 0, 0, 0);
+    return deadline < today;
+  }
+
   async function handleCreateChore(e) {
     e.preventDefault();
     if (!title || !assigneeId || isSubmitting) return;
 
-    // Защита: если обычный юзер как-то обошел фронтенд и пытается пропихнуть рекурсию
     if (isRecurring && !isPremium) {
       alert('Auto-recurring tasks are only available for Premium Grids!');
       return;
@@ -37,22 +47,20 @@
     }]);
 
     if (!error) {
-      // Очищаем поля формы при успешном создании
       title = '';
       points = 10;
       dueDate = '';
       assigneeId = '';
       isRecurring = false;
-      await invalidateAll(); // Реактивно обновляем списки на сервере
+      await invalidateAll();
     } else {
       alert('Error creating chore: ' + error.message);
     }
     isSubmitting = false;
   }
 
-  // Функция закрытия квеста (выполнение таски с начислением XP)
-  async function handleCompleteChore(choreId, pointsReward, assigneeUuid) {
-    // 1. Помечаем задачу в базе как выполненную
+  async function handleCompleteChore(choreId, pointsReward, assigneeUuid, isOverdue) {
+    // 1. Помечаем задачу как выполненную
     const { error: choreError } = await supabase
       .from('chores')
       .update({ is_done: true })
@@ -63,7 +71,7 @@
       return;
     }
 
-    // 2. Вытаскиваем текущий баланс XP того сожителя, на кого был выписан квест
+    // 2. Вытаскиваем текущие очки пользователя
     const { data: userProfile, error: profileGetError } = await supabase
       .from('profiles')
       .select('points')
@@ -72,29 +80,40 @@
 
     if (profileGetError) return;
 
-    // 3. Начисляем ему заслуженную награду в общую таблицу
-    const newPoints = (userProfile.points || 0) + pointsReward;
+    // 3. Считаем итоговую награду с учетом штрафа Habitica-style
+    // Если задача просрочена, вычитаем штраф (очки могут уйти в минус!)
+    const finalReward = isOverdue ? (pointsReward - OVERDUE_PENALTY) : pointsReward;
+    const newPoints = (userProfile.points || 0) + finalReward;
+
     await supabase
       .from('profiles')
       .update({ points: newPoints })
       .eq('id', assigneeUuid);
 
-    await invalidateAll(); // Обновляем экран, чтобы лидерборд пересчитался
+    // Показываем сочное киберпанк-уведомление
+    if (isOverdue) {
+      alert(`Quest completed, but system detected inefficiency! Overdue penalty applied: ${finalReward} XP adjusted.`);
+    }
+
+    await invalidateAll();
   }
 </script>
 
 <div class="w-full min-h-screen text-white p-5 pb-32 md:p-10 md:pb-24 relative overflow-hidden">
   
+  <!-- ДИНАМИЧЕСКИЙ ЭМБИЕНТ-БЭКГРАУНД -->
   <div class="absolute top-[-10%] right-[-10%] w-96 h-96 bg-zinc-800/10 rounded-full blur-[130px] animate-ambient-glow pointer-events-none z-0"></div>
   <div class="absolute bottom-[-10%] left-[-10%] w-96 h-96 {#if isPremium}bg-cyber-amber/10{:else}bg-cyber-orange/5{/if} rounded-full blur-[140px] animate-ambient-glow pointer-events-none z-0" style="animation-delay: -3s;"></div>
 
   <div class="relative z-10 max-w-xl mx-auto space-y-6">
     
+    <!-- ХЕДЕР -->
     <header class="mb-4">
       <span class="text-[10px] font-bold tracking-widest text-zinc-500 uppercase">Quest Deployer</span>
       <h1 class="text-3xl font-black tracking-tight text-white mt-0.5">Chores Grid ⚔️</h1>
     </header>
 
+    <!-- ФОРМА СОЗДАНИЯ ЗАДАЧИ -->
     <div class="p-5 bg-cyber-card/40 border border-white/[0.06] backdrop-blur-xl rounded-3xl">
       <h3 class="text-xs font-mono font-black text-zinc-400 uppercase tracking-wider mb-4">Deploy New Household Quest</h3>
       
@@ -126,6 +145,7 @@
           />
         </div>
 
+        <!-- МОДУЛЬ РЕКУРСИИ ДЛЯ ПРЕМИУМА -->
         <div class="flex items-center justify-between p-3 bg-zinc-950/30 border border-white/[0.03] rounded-xl">
           <label class="flex items-center gap-3 cursor-pointer select-none text-xs font-mono text-zinc-400">
             <input 
@@ -168,6 +188,7 @@
       </form>
     </div>
 
+    <!-- СПИСОК ЗАДАЧ С СИСТЕМОЙ ШТРАФОВ -->
     <div class="space-y-3">
       <h3 class="text-xs font-mono font-black text-zinc-400 uppercase tracking-wider px-1">Active Operations Ledger</h3>
       
@@ -178,29 +199,46 @@
       {:else}
         <div class="space-y-2.5">
           {#each chores as chore}
-            <div class="p-4 bg-cyber-card/40 border {chore.is_done ? 'border-zinc-800/40 opacity-50' : 'border-white/[0.06]'} backdrop-blur-xl rounded-2xl flex items-center justify-between transition-all">
-              <div class="space-y-1 max-w-[70%]">
-                <h4 class="text-sm font-bold tracking-tight {chore.is_done ? 'line-through text-zinc-500' : 'text-white'}">
+            {@const overdue = isChoreOverdue(chore.due_date, chore.is_done)}
+            
+            <!-- Динамический лоск: Красный неон и пульсация для просроченных квестов -->
+            <div class="p-4 bg-cyber-card/40 border backdrop-blur-xl rounded-2xl flex items-center justify-between transition-all duration-300
+              {chore.is_done ? 'border-zinc-800/40 opacity-50' : overdue ? 'border-red-500/40 bg-red-950/5 shadow-neon-red/10 animate-pulse' : 'border-white/[0.06]'}"
+            >
+              <div class="space-y-1 max-w-[65%]">
+                <h4 class="text-sm font-bold tracking-tight 
+                  {chore.is_done ? 'line-through text-zinc-500' : overdue ? 'text-red-400 font-extrabold' : 'text-white'}"
+                >
                   {chore.title}
                 </h4>
                 <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-mono text-zinc-500">
-                  <span>Operator: <strong class="text-zinc-300">{chore.profiles?.username || 'Unassigned'}</strong></span>
+                  <span>Operator: <strong class="{overdue ? 'text-red-300/80' : 'text-zinc-300'}">{chore.profiles?.username || 'Unassigned'}</strong></span>
                   {#if chore.due_date}
-                    <span>Due: <strong class="text-zinc-400">{chore.due_date}</strong></span>
+                    <span class="{overdue ? 'text-red-400 font-bold' : 'text-zinc-500'}">
+                      {overdue ? '⚠️ EXPIRED:' : 'Due:'} <strong>{chore.due_date}</strong>
+                    </span>
                   {/if}
                 </div>
               </div>
 
               <div class="flex items-center gap-3">
-                <span class="font-mono text-xs font-black text-cyber-amber bg-zinc-950/60 border border-white/5 px-2 py-1 rounded-xl">
-                  +{chore.points} XP
-                </span>
+                <!-- Динамический подсчет награды/штрафа на плашке -->
+                {#if overdue}
+                  <span class="font-mono text-[11px] font-black text-red-400 bg-zinc-950/80 border border-red-500/20 px-2 py-1 rounded-xl">
+                    {chore.points - OVERDUE_PENALTY} XP
+                  </span>
+                {:else}
+                  <span class="font-mono text-xs font-black text-cyber-amber bg-zinc-950/60 border border-white/5 px-2 py-1 rounded-xl">
+                    +{chore.points} XP
+                  </span>
+                {/if}
 
                 {#if !chore.is_done}
                   <button 
-                    on:click={() => handleCompleteChore(chore.id, chore.points, chore.assignee_id)}
+                    on:click={() => handleCompleteChore(chore.id, chore.points, chore.assignee_id, overdue)}
                     type="button"
-                    class="p-2 bg-cyber-green/10 hover:bg-cyber-green text-cyber-green hover:text-black border border-cyber-green/20 rounded-xl transition-all cursor-pointer text-xs font-bold"
+                    class="p-2 border rounded-xl transition-all cursor-pointer text-xs font-bold
+                      {overdue ? 'bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-black border-red-500/20' : 'bg-cyber-green/10 hover:bg-cyber-green text-cyber-green hover:text-black border-cyber-green/20'}"
                   >
                     ✔
                   </button>
@@ -215,5 +253,4 @@
   </div>
 
   <BottomNav />
-
 </div>
