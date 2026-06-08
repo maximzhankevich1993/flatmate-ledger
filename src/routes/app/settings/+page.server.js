@@ -1,28 +1,22 @@
-import { supabase } from '$lib/supabaseClient';
-
 /** @type {import('./$types').PageServerLoad} */
-export async function load() {
-  const targetHouseholdId = "99999999-9999-9999-9999-999999999999";
+export async function load({ parent, locals }) {
+  // Забираем профиль из родительского лейаута
+  const { profile } = await parent();
 
-  // 1. Получаем данные о самом доме (Имя и Код приглашения)
-  const { data: household, error: houseError } = await supabase
+  if (!profile || !profile.household_id) {
+    return { household: null };
+  }
+
+  // Вытягиваем данные о доме сожителя
+  const { data: household, error } = await locals.supabase
     .from('households')
     .select('name, invite_code')
-    .eq('id', targetHouseholdId)
+    .eq('id', profile.household_id)
     .single();
 
-  if (houseError) console.error('Error fetching household settings:', houseError);
-
-  // 2. Получаем список всех жильцов для управления комнатой
-  const { data: roommates, error: roommatesError } = await supabase
-    .from('profiles')
-    .select('id, username, created_at')
-    .eq('household_id', targetHouseholdId);
-
-  if (roommatesError) console.error('Error fetching roommates list:', roommatesError);
+  if (error) console.error('Error fetching household settings:', error);
 
   return {
-    household: household || { name: "Cyber Apartment", invite_code: "ERROR-CODE" },
-    roommates: roommates || []
+    household: household || null
   };
 }
