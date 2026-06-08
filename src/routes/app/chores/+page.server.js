@@ -1,12 +1,14 @@
-import { supabase } from '$lib/supabaseClient';
-
 /** @type {import('./$types').PageServerLoad} */
-export async function load() {
-  // Тот же захардкоженный ID дома для бесшовной синхронизации модулей в MVP
-  const targetHouseholdId = "99999999-9999-9999-9999-999999999999"; 
+export async function load({ parent, locals }) {
+  // Наследуем живой профиль авторизованного юзера
+  const { profile } = await parent();
 
-  // 1. Запрашиваем список обязанностей с именем ответственного сожителя
-  const { data: rawChores, error: choresError } = await supabase
+  if (!profile || !profile.household_id) {
+    return { chores: [], roommates: [] };
+  }
+
+  // 1. Тянем все задачи этого дома + JOIN имени исполнителя
+  const { data: chores, error: choresError } = await locals.supabase
     .from('chores')
     .select(`
       id,
@@ -14,30 +16,25 @@ export async function load() {
       points,
       due_date,
       is_done,
+      assignee_id,
       profiles ( username )
     `)
-    .eq('household_id', targetHouseholdId)
-    .order('is_done', { ascending: true }) // Сначала активные задачи, выполненные — вниз
+    .eq('household_id', profile.household_id)
+    .order('is_done', { ascending: true }) // Сначала невыполненные
     .order('created_at', { ascending: false });
 
-  if (choresError) {
-    console.error('Error fetching chores:', choresError);
-  }
+  if (choresError) console.error('Error fetching chores:', choresError);
 
-  // 2. Подтягиваем баланс XP очков для текущего пользователя из профиля
-  const { data: profileData, error: profileError } = await supabase
+  // 2. Тянем список сожителей для выпадающего меню в форме
+  const { data: roommates, error: roommatesError } = await locals.supabase
     .from('profiles')
-    .select('points')
-    .eq('household_id', targetHouseholdId)
-    .limit(1)
-    .single(); // Берем один профиль для симуляции авторизованного юзера
+    .select('id, username')
+    .eq('household_id', profile.household_id);
 
-  if (profileError) {
-    console.error('Error fetching user points:', profileError);
-  }
+  if (roommatesError) console.error('Error fetching roommates for chores:', roommatesError);
 
   return {
-    chores: rawChores || [],
-    userPoints: profileData?.points || 0
+    chores: chores || [],
+    roommates: roommates || []
   };
 }
